@@ -1,0 +1,140 @@
+---
+title: "Activity Assignment"
+author: "Summer Vaught"
+date: "September 16, 2016"
+output: html_document
+---
+Load Packages
+
+```{r loadpackages}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+```
+
+First we will read the data
+```{r readdata}
+setwd("C://Users/Summer/Documents/R/Reproducible Data Project 1")
+activity <- read.csv("./activity.csv")
+```
+Convert dates to date class
+```{r convertdates}
+activity$date <- as.Date(activity$date)
+```
+We need to calculate the number of steps taken per day. 
+```{r totalsteps}
+total_steps <- aggregate(activity$steps ~ activity$date, FUN=sum, )
+colnames(total_steps)<- c("date", "steps")
+total_steps
+```
+Here is a histogram of the total steps per day
+```{r histogram}
+ggplot(total_steps, aes(steps))+
+    geom_histogram(fill = "red", binwidth = 1500) +
+    labs(title = "Total Steps Per Day", x = "Steps", y = "Frequency" )
+```
+
+Calculate the mean and median of the total steps taken each day
+
+```{r meantotalsteps}
+mean(total_steps$steps); median(total_steps$steps, na.rm = TRUE);
+```
+
+Let's organize the data to find the mean number of steps taken during each five minute period.
+```{r stepsperperiod}
+period <- aggregate(steps ~ interval, activity, mean)
+```
+Let's make a line graph of the means steps taken during each period of the day
+```{r linegraph}
+ggplot(period, aes(interval, steps))+
+  geom_line(color = "red", size = 1)+
+  labs(title = "Mean steps for each 5 minute time period", x = "Period", y = "Mean number of steps per day")
+```
+
+What is the interval with the maximum average steps?
+
+``` {r maxinterval}
+period[which.max(period$steps),]
+```
+
+##Missing Values
+
+How many values are missing in the steps column?
+
+```{ r missing}
+sum(is.na(activity$steps))
+```
+
+Let's fill in the missing values with the mean of each day
+
+``` {r fillmissing}
+nas<- is.na(activity$steps)
+avg_interval<- tapply(activity$steps, activity$interval, mean, na.rm=TRUE, simplify = TRUE)
+activity$steps[nas] <- avg_interval[as.character(activity$interval[nas])]
+names(activity)
+head(activity)
+```
+
+Let's check for missing values
+
+```{r checkmissing}
+sum(is.na(activity))
+```
+  
+Let's calculate the total number of steps per day with the NA values filled in. 
+k
+```{r totalstepsnona}
+total_steps <- aggregate(activity$steps ~ activity$date, FUN=sum, )
+colnames(total_steps)<- c("date", "steps")
+str(total_steps)
+```
+
+We will create a histogram with the new data with the NA's replaced.
+```{r histnona}
+ggplot(total_steps, aes(steps))+
+  geom_histogram(color = "red", binwidth = 1500)+
+  labs(title = "Total number of steps per day", x = "Steps", y = "Frequency")
+```
+
+Here are the mean and median of the total steps per day with the NA values filled 
+```{r mean_med_nona}
+mean(total_steps$steps); median(total_steps$steps); 
+```
+
+It appears that the mean is identital to the oringinal data set (which is what we would expect) with the NA values, and the median has only increased by 1.2 steps(which is hardly worth noting). The histogram appears to be more centered at the mean, with less variation. The total number of steps with the NA values had a significantly larger standard deviation (approximately 300 steps) that the data set with the NA values replaced (which is also what we should expect).
+
+We want to look at the differences between activity on weekdays and weekends. We will first create a new varaible in our data set that tells us if the day is a weekday or a weekend. 
+
+```{r labelweekday}
+activity <- activity%>%
+    mutate(weektype = ifelse(weekdays(activity$date)== "Saturday" | weekdays(activity$date) == "Sunday", "Weekend", "Weekday"))
+str(activity)
+```
+
+Let's organize our data according to weekend and weekday
+
+```{r splitweekday}
+Interval2<- activity%>%
+        group_by(interval, weektype)%>%
+        summarize(avg_steps2 = mean(steps, na.rm=TRUE))
+head(Interval2)
+```
+
+```{r weekdayplot}
+ggplot(Interval2, aes(x =interval , y=avg_steps2, color=weektype)) +
+       geom_line(color = "red", size = 1) +
+       labs(title = "Avgerage Daily Steps by Weektype", x = "Interval", y = "Steps") +
+       facet_wrap(~weektype, ncol = 1, nrow=2)
+```
+
+It appears that on Weekdays the there is a spike of activity in the morning with a slow down in mid-morning and afternoon (it is likely the individual works a desk job). On the weekends there is more constant activity from mid-morning until the evening. 
+
+
+
+
+
+
+
+
+    
+
